@@ -13,11 +13,19 @@
 #include <zephyr/sys_clock.h>
 #include <zephyr/irq.h>
 
-#define DT_DRV_COMPAT riscv_machine_timer
+#if defined(CONFIG_CPU_XUANTIE_RISCV)
 
+#define DT_DRV_COMPAT xuantie_systimer
+
+#define MTIMECMP_REG DT_INST_REG_ADDR(0)
+#define MTIME_REG    (DT_INST_REG_ADDR(0) + 0x7ff8U)
+#define TIMER_IRQN   DT_INST_IRQ_BY_IDX(0, 1, irq)
+#else
+#define DT_DRV_COMPAT riscv_machine_timer
 #define MTIME_REG    DT_INST_REG_ADDR_BY_NAME(0, mtime)
 #define MTIMECMP_REG DT_INST_REG_ADDR_BY_NAME(0, mtimecmp)
 #define TIMER_IRQN   DT_INST_IRQN(0)
+#endif
 
 #define CYC_PER_TICK (uint32_t)(sys_clock_hw_cycles_per_sec() / CONFIG_SYS_CLOCK_TICKS_PER_SEC)
 

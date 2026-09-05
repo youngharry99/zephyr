@@ -193,9 +193,26 @@ SECTION_FUNC(exception.entry, _isr_wrapper)
 	SOC_ISR_SW_STACKING
 #else
 	/* Save caller-saved registers on current thread stack. */
+#if defined(__riscv_matrix)
+	/* FIXME: avoid compile error. use latency save-restore later for vector & matrix support */
+	addi sp, sp, -(__struct_arch_esf_SIZEOF - (8 * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 8) * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 32)))
+	addi sp, sp, -(4 * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 8) * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 32))
+	addi sp, sp, -(4 * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 8) * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 32))
+	DO_CALLER_SAVED(sr)		;
+#else
 	addi sp, sp, -__struct_arch_esf_SIZEOF
 	DO_CALLER_SAVED(sr)		;
+#endif /* __riscv_matrix */
 #endif /* CONFIG_RISCV_SOC_HAS_ISR_STACKING */
+#if 0
+	csrr t0, mcause
+	li t1, 7
+	beq t0, t1, is_trap_xx
+	li t1, 5
+	beq t0, t1, is_trap_xx
+	li t1, 2
+	beq t0, t1, is_trap_xx
+#endif
 
 	/* Save s0 in the esf and load it with &_current_cpu. */
 	sr s0, __struct_arch_esf_s0_OFFSET(sp)
@@ -861,9 +878,18 @@ fp_trap_exit:
 	lr sp, __struct_arch_esf_sp_OFFSET(sp)
 #else
 	/* remove esf from the stack */
+#if defined(__riscv_matrix)
+	/* FIXME: avoid compile error. use latency save-restore later for vector & matrix support */
+	addi sp, sp, (__struct_arch_esf_SIZEOF - (8 * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 8) * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 32)))
+	addi sp, sp, (4 * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 8) * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 32))
+	addi sp, sp, (4 * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 8) * (CONFIG_XUANTIE_RISCV_RLENB_LEN / 32))
+#else
 	addi sp, sp, __struct_arch_esf_SIZEOF
+#endif /* __riscv_matrix */
 #endif
 
 #endif /* CONFIG_RISCV_SOC_HAS_ISR_STACKING */
 
 	mret
+is_trap_xx:
+	j .

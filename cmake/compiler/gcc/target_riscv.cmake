@@ -67,6 +67,9 @@ if(CONFIG_RISCV_ISA_EXT_ZIFENCEI)
   string(APPEND riscv_march "_zifencei")
 endif()
 
+if (CONFIG_CPU_XUANTIE_RISCV)
+  string(APPEND riscv_march "_xtheadcmo")
+endif()
 # Check whether we already imply Zaamo/Zalrsc by selecting the A extension; if not - check them
 # individually and enable them as needed
 if(NOT CONFIG_RISCV_ISA_EXT_A)
@@ -140,6 +143,10 @@ if(CONFIG_RISCV_USE_MSAVE_RESTORE)
   list(APPEND RISCV_C_FLAGS -msave-restore)
 endif()
 
+if (CONFIG_CPU_XUANTIE_RISCV)
+  list(APPEND TOOLCHAIN_C_FLAGS -mcpu=${CONFIG_XUANTIE_CPU_NAME})
+  list(APPEND TOOLCHAIN_LD_FLAGS NO_SPLIT -mcpu=${CONFIG_XUANTIE_CPU_NAME})
+else()
 list(APPEND RISCV_C_FLAGS
      -mabi=${riscv_mabi}
      -march=${riscv_march}
@@ -147,6 +154,7 @@ list(APPEND RISCV_C_FLAGS
      )
 list(APPEND TOOLCHAIN_C_FLAGS ${RISCV_C_FLAGS})
 list(APPEND TOOLCHAIN_GROUPED_LD_FLAGS RISCV_C_FLAGS)
+endif()
 
 # Flags not supported by llext linker
 # (regexps are supported and match whole word)
