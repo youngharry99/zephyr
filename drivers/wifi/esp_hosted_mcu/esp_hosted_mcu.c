@@ -125,7 +125,7 @@ static void esp_hosted_mcu_handle_event(const Rpc *rpc, void *user_data)
 		data->state[ESP_HOSTED_MCU_IFACE_STA] = WIFI_STATE_COMPLETED;
 		net_if_dormant_off(sta);
 		wifi_mgmt_raise_connect_result_event(sta, 0);
-		if (IS_ENABLED(CONFIG_WIFI_STA_AUTO_DHCPV4)) {
+		if (IS_ENABLED(CONFIG_WIFI_ESP_HOSTED_MCU_STA_AUTO_DHCPV4)) {
 			net_dhcpv4_start(sta);
 		}
 		break;
@@ -143,7 +143,7 @@ static void esp_hosted_mcu_handle_event(const Rpc *rpc, void *user_data)
 			wifi_mgmt_raise_connect_result_event(sta, WIFI_STATUS_CONN_FAIL);
 		} else {
 			data->state[ESP_HOSTED_MCU_IFACE_STA] = WIFI_STATE_DISCONNECTED;
-			if (IS_ENABLED(CONFIG_WIFI_STA_AUTO_DHCPV4)) {
+			if (IS_ENABLED(CONFIG_WIFI_ESP_HOSTED_MCU_STA_AUTO_DHCPV4)) {
 				net_dhcpv4_stop(sta);
 			}
 			net_if_dormant_on(sta);
@@ -264,10 +264,15 @@ static int esp_hosted_mcu_scan(const struct device *dev, struct net_if *iface,
 
 	k_sem_reset(&data->scan_sem);
 
-	/* Kick off a blocking scan on the coprocessor. */
+	/*
+	 * Start the scan asynchronously. A blocking coprocessor request does not
+	 * respond until every channel has been scanned, which can exceed the RPC
+	 * timeout on dual-band parts such as ESP32-C5. Scan completion is already
+	 * reported by Event_StaScanDone and waited for below.
+	 */
 	req.msg_id = RpcId_Req_WifiScanStart;
 	req.which_payload = Rpc_req_wifi_scan_start_tag;
-	req.payload.req_wifi_scan_start.block = true;
+	req.payload.req_wifi_scan_start.block = false;
 	req.payload.req_wifi_scan_start.config_set = 0;
 	ret = esp_hosted_mcu_rpc_call(&req, &resp, ESP_HOSTED_MCU_RPC_TIMEOUT);
 	if (ret) {

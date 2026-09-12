@@ -218,9 +218,11 @@ static int esp_hosted_mcu_spi_transfer(const struct device *dev, const uint8_t *
 	 * dmas.
 	 *
 	 * The transaction is a fixed full frame in each direction. A
-	 * receive-only poll passes no transmit buffer and leaves the controller
-	 * to clock out a frame worth of zeros, which the SPI API defines a null
-	 * buffer to mean.
+	 * A receive-only poll still has to send a valid idle frame. The SPI API
+	 * leaves the value shifted for a NULL transmit buffer to the controller;
+	 * some controllers use 0xff, which the coprocessor rejects as a malformed
+	 * header. A zero-filled V1 header has a zero payload length and is decoded
+	 * as a dummy frame.
 	 *
 	 * This holds what a transmit shifted in. It is not a discard sink: the
 	 * stash below needs the frame, so it cannot be a null receive buffer.
@@ -230,6 +232,7 @@ static int esp_hosted_mcu_spi_transfer(const struct device *dev, const uint8_t *
 	 * must not reach into a neighbouring object.
 	 */
 	static uint8_t rx_buf[ESP_HOSTED_MCU_FRAME_SIZE] __aligned(ESP_HOSTED_MCU_DMA_ALIGN);
+	static const uint8_t tx_dummy[ESP_HOSTED_MCU_FRAME_SIZE] __aligned(ESP_HOSTED_MCU_DMA_ALIGN);
 
 	/*
 	 * Hand back a frame stashed by an earlier transmit before using the bus.
@@ -248,7 +251,7 @@ static int esp_hosted_mcu_spi_transfer(const struct device *dev, const uint8_t *
 	k_mutex_unlock(&data->lock);
 
 	const struct spi_buf txb = {
-		.buf = (void *)tx,
+		.buf = (void *)(tx != NULL ? tx : tx_dummy),
 		.len = ESP_HOSTED_MCU_FRAME_SIZE,
 	};
 	const struct spi_buf_set txs = {.buffers = &txb, .count = 1};

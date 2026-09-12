@@ -29,6 +29,14 @@ config NET_MGMT_EVENT_STACK_SIZE
 config NET_RX_STACK_SIZE
 	default 2560
 
+config WIFI_ESP_HOSTED_MCU_STA_AUTO_DHCPV4
+	bool "Automatically start DHCPv4 negotiation"
+	default y if NET_DHCPV4
+	depends on NET_IPV4
+	help
+	  Start the DHCPv4 client when the station connects and stop it when
+	  the station disconnects.
+
 config WIFI_ESP_HOSTED_MCU_AP_STA_MODE
 	bool "Soft-AP interface support"
 	default y if WIFI_USAGE_MODE_STA_AP || WIFI_USAGE_MODE_AP
